@@ -8,10 +8,12 @@
 // Latency: after the game transmits it expects the walker's reply within a
 // few emulated milliseconds. While a reply is outstanding, the receive call
 // blocks the emulator thread (freezing emulated time) for up to 150 ms of
-// real time, exactly like melonDS-IR. Idle polling never blocks.
+// real time (melonDS-IR waits 150 ms; a Bluetooth relay needs longer). Idle
+// polling never blocks.
 
 #include <arpa/inet.h>
 #include <cerrno>
+#include <cstdio>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -27,7 +29,9 @@ namespace melonDS::Platform
 namespace
 {
 constexpr int Port = 8081;
-constexpr u64 ReplyWaitMs = 150;
+// Emulated time is frozen while waiting, so the game cannot observe a longer
+// wait; Bluetooth relays occasionally need several hundred ms.
+constexpr u64 ReplyWaitMs = 2000;
 int listener = -1;
 int client = -1;
 bool awaitingReply = false;
@@ -127,7 +131,8 @@ u8 IR_RecievePacket(char* data, int len, void* userdata)
         }
         // No reply within the bound: let the game see silence and run its own
         // retry/timeout logic instead of stalling again on the next poll.
-        if (got == 0) awaitingReply = false;
+        if (got == 0) { awaitingReply = false; LOG_WARN("IRBridge", "no reply within %llu ms", (unsigned long long)ReplyWaitMs); }
+        else LOG_DEBUG("IRBridge", "reply after %llu ms", (unsigned long long)(GetMSCount() - start));
     }
     if (got > 0) awaitingReply = false;
     return static_cast<u8>(got);
@@ -135,9 +140,10 @@ u8 IR_RecievePacket(char* data, int len, void* userdata)
 
 void IR_LogPacket(char* data, int len, bool isTx, void* userdata)
 {
-    (void)data;
     (void)userdata;
-    LOG_DEBUG("IRBridge", "%s %d bytes", isTx ? "Tx" : "Rx", len);
+    char head[3 * 8 + 1] = {};
+    for (int i = 0; i < len && i < 8; ++i) snprintf(head + 3 * i, 4, "%02X ", (unsigned char)(data[i] ^ 0xAA));
+    LOG_DEBUG("IRBridge", "%s %d bytes: %s", isTx ? "Tx" : "Rx", len, head);
 }
 
 }
