@@ -1,3 +1,29 @@
+# melonDS IR (Artemis fork)
+
+This branch (`artemis-ir`) of the melonDS Android port emulates the **Pokéwalker infrared link** of the HeartGold/SoulSilver cartridge, so the game can talk to a Pokéwalker that is not physically in front of the phone. It was built for the [Artemis Watch](https://github.com/weegee721/artemis-watch), whose PkWalker app runs the original Pokéwalker firmware and receives the IR traffic over Bluetooth through the Artemis companion app.
+
+**How it works**
+
+- `melonDS-android-lib` ([fork](https://github.com/weegee721/melonDS-android-lib/tree/artemis-ir)) carries the cartridge side from [melonDS-IR](https://github.com/NicklasK-1/melonDS-IR): `CartRetailIR` SPI commands `0x01` (read) and `0x02` (write) pass whole IR packets to `Platform::IR_SendPacket` / `Platform::IR_RecievePacket`.
+- `app/src/main/cpp/IRBridge.cpp` implements those as a TCP server on **127.0.0.1:8081** (loopback only), wire-compatible with melonDS-IR's TCP mode: raw IR bytes (still XORed with `0xAA`), one packet per write. The server opens when the game first uses IR (the Pokéwalker menu).
+- While the game waits for a reply, the emulator thread blocks for up to 2 s of real time with emulated time frozen, so Bluetooth latency cannot time out the connection. There is no wait after the DS's shutdown packet (`0xF4`).
+- Any client on the phone can be the walker. The Artemis companion's `PokewalkerBridge` relays each packet to the watch as `pwir;<base64>` and announces `pwirLink;1/0`.
+
+**Build and install** (Android SDK with NDK 28.0.13004108, CMake 3.22.1, platform `android-37.0`, JDK 21):
+
+```
+git clone --recurse-submodules https://github.com/weegee721/melonDS-android.git
+cd melonDS-android
+./gradlew assembleGitHubProdDebug -Pandroid.injected.build.abi=arm64-v8a
+adb install -t -r app/build/intermediates/apk/gitHubProd/debug/app-gitHub-prod-debug.apk
+```
+
+It installs beside stock melonDS as **melonDS IR** (`dev.artemis.melonds.ir`; debug builds install as **melonDS IR Dev**, `dev.artemis.melonds.ir.dev`). Copy your HeartGold/SoulSilver save next to the ROM with the same name and a `.sav` extension. Logs: `adb logcat -s IRBridge`.
+
+The rest of this file is the upstream README.
+
+---
+
 # melonDS Android port
 Android port of [melonDS](https://melonds.kuribo64.net/), a DS and DSi emulator.
 
