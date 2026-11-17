@@ -592,6 +592,11 @@ namespace Platform
         return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
     }
 
+    u64 GetUSCount()
+    {
+        return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    }
+
     void Camera_Start(int num, void* userdata)
     {
         MelonDSAndroid::cameraHandler->startCamera(num);

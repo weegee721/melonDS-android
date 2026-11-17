@@ -31,6 +31,7 @@ add_library(
         ${ANDROID-CPP}/AndroidMelonEventMessenger.cpp
         ${ANDROID-CPP}/CartLoader.cpp
         ${ANDROID-CPP}/DSiSupport.cpp
+        ${ANDROID-CPP}/IRBridge.cpp
         ${ANDROID-CPP}/EmulatorArgsBuilder.cpp
         ${ANDROID-CPP}/EmulatorMessageQueueJNI.cpp
         ${ANDROID-CPP}/JniEnvHandler.cpp
