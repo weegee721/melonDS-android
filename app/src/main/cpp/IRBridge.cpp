@@ -110,7 +110,8 @@ u8 IR_SendPacket(char* data, int len, void* userdata)
         closeClient();
         return 0;
     }
-    awaitingReply = true;
+    // Shutdown (0xF4 after the 0xAA transport XOR) ends the session: no reply follows.
+    awaitingReply = (static_cast<u8>(data[0]) ^ 0xAA) != 0xF4;
     return 0;
 }
 
